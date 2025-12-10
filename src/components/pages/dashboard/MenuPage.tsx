@@ -4,7 +4,15 @@ import DeleteConfirmationModal from '@/components/features/menu/DeleteConfirmati
 import MenuFormModal, {
   type MenuFormData,
 } from '@/components/features/menu/MenuFormModal';
-import { useState } from 'react';
+import type { MenuItem } from '@/utils/menuApi';
+import {
+  createMenuItem,
+  deleteMenuItem,
+  getMenuItems,
+  updateMenuItem,
+} from '@/utils/menuApi';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import {
   MdAdd,
   MdChevronLeft,
@@ -15,146 +23,14 @@ import {
   MdSearch,
 } from 'react-icons/md';
 
-// Mock Data
-const INITIAL_MENU = [
-  {
-    id: 1,
-    name: 'Nasi Goreng Spesial',
-    price: 15000,
-    category: 'Makanan',
-    description: 'Nasi goreng dengan topping ayam suwir dan telur mata sapi.',
-    available: true,
-  },
-  {
-    id: 2,
-    name: 'Ayam Geprek',
-    price: 18000,
-    category: 'Makanan',
-    description: 'Ayam goreng tepung digeprek dengan sambal bawang pedas.',
-    available: true,
-  },
-  {
-    id: 3,
-    name: 'Es Teh Manis',
-    price: 5000,
-    category: 'Minuman',
-    description: 'Teh manis dingin segar.',
-    available: false,
-  },
-  {
-    id: 4,
-    name: 'Mie Goreng Jawa',
-    price: 12000,
-    category: 'Makanan',
-    description: 'Mie goreng khas Jawa dengan bumbu kecap dan sayuran.',
-    available: true,
-  },
-  {
-    id: 5,
-    name: 'Kopi Hitam',
-    price: 4000,
-    category: 'Minuman',
-    description: 'Kopi hitam panas tanpa gula.',
-    available: true,
-  },
-  {
-    id: 6,
-    name: 'Sate Ayam',
-    price: 20000,
-    category: 'Makanan',
-    description: 'Sate ayam dengan bumbu kacang.',
-    available: true,
-  },
-  {
-    id: 7,
-    name: 'Es Jeruk',
-    price: 7000,
-    category: 'Minuman',
-    description: 'Minuman jeruk segar dingin.',
-    available: true,
-  },
-  {
-    id: 8,
-    name: 'Bakso Kuah',
-    price: 15000,
-    category: 'Makanan',
-    description: 'Bakso sapi dengan kuah gurih.',
-    available: false,
-  },
-  {
-    id: 9,
-    name: 'Teh Panas',
-    price: 3000,
-    category: 'Minuman',
-    description: 'Teh tawar panas.',
-    available: true,
-  },
-  {
-    id: 10,
-    name: 'Nasi Ayam Bakar',
-    price: 20000,
-    category: 'Makanan',
-    description: 'Nasi dengan ayam bakar bumbu kecap.',
-    available: true,
-  },
-  {
-    id: 11,
-    name: 'Es Kopi Susu',
-    price: 10000,
-    category: 'Minuman',
-    description: 'Kopi susu gula aren dengan es.',
-    available: true,
-  },
-  {
-    id: 12,
-    name: 'Soto Ayam',
-    price: 14000,
-    category: 'Makanan',
-    description: 'Soto ayam dengan kuah bening.',
-    available: true,
-  },
-  {
-    id: 13,
-    name: 'Nasi Uduk',
-    price: 12000,
-    category: 'Makanan',
-    description: 'Nasi uduk dengan telur dan sambal kacang.',
-    available: false,
-  },
-  {
-    id: 14,
-    name: 'Jus Alpukat',
-    price: 12000,
-    category: 'Minuman',
-    description: 'Jus alpukat kental dengan topping cokelat.',
-    available: true,
-  },
-  {
-    id: 15,
-    name: 'Ayam Penyet',
-    price: 17000,
-    category: 'Makanan',
-    description: 'Ayam penyet sambal terasi.',
-    available: true,
-  },
-];
-
 const ITEMS_PER_PAGE = 8;
 
-interface MenuItem {
-  id: number;
-  name: string;
-  price: number;
-  category: string;
-  description: string;
-  available: boolean;
-  image?: string; // Optional since image might be missing
-}
-
 export default function MenuPage() {
-  const [menuItems] = useState<MenuItem[]>(INITIAL_MENU);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -162,6 +38,25 @@ export default function MenuPage() {
 
   // Selection State
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+
+  // Fetch menu items on mount
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
+  async function fetchMenuItems() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const items = await getMenuItems();
+      setMenuItems(items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat menu');
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   // --- Logic ---
   const filteredItems = menuItems.filter((item) =>
@@ -192,20 +87,38 @@ export default function MenuPage() {
     setIsDeleteOpen(true);
   };
 
-  const handleFormSubmit = (formData: MenuFormData) => {
-    if (selectedItem) {
-      console.log('Updating menu:', formData);
-      // Update logic here
-    } else {
-      console.log('Creating new menu:', formData);
-      // Create logic here
+  const handleFormSubmit = async (formData: MenuFormData) => {
+    try {
+      if (selectedItem) {
+        // Update existing menu item
+        const updated = await updateMenuItem(selectedItem.id, formData);
+        setMenuItems((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } else {
+        // Create new menu item
+        const newItem = await createMenuItem(formData);
+        setMenuItems((prev) => [newItem, ...prev]);
+      }
+    } catch (err) {
+      // Error will be handled by the modal
+      throw err;
     }
   };
 
-  const handleConfirmDelete = () => {
-    console.log('Deleting menu id:', selectedItem?.id);
-    setIsDeleteOpen(false);
-    // Delete logic here
+  const handleConfirmDelete = async () => {
+    if (!selectedItem) return;
+
+    try {
+      await deleteMenuItem(selectedItem.id);
+      setMenuItems((prev) =>
+        prev.filter((item) => item.id !== selectedItem.id),
+      );
+      setIsDeleteOpen(false);
+      setSelectedItem(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal menghapus menu');
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -213,6 +126,73 @@ export default function MenuPage() {
       setCurrentPage(page);
     }
   };
+
+  // Quick toggle availability
+  const handleToggleAvailability = async (item: MenuItem) => {
+    // Optimistic update
+    setMenuItems((prev) =>
+      prev.map((i) =>
+        i.id === item.id ? { ...i, isAvailable: !i.isAvailable } : i,
+      ),
+    );
+
+    try {
+      await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
+    } catch (err) {
+      // Revert on error
+      setMenuItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, isAvailable: item.isAvailable } : i,
+        ),
+      );
+      alert(err instanceof Error ? err.message : 'Gagal mengubah status');
+    }
+  };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+          <p className="text-gray-500">Memuat menu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-red-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-red-600 font-medium mb-2">Terjadi Kesalahan</p>
+          <p className="text-gray-500 text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchMenuItems}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -261,40 +241,66 @@ export default function MenuPage() {
               key={item.id}
               className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full"
             >
-              {/* Image Placeholder */}
+              {/* Image */}
               <div className="relative h-48 bg-gray-50 flex items-center justify-center shrink-0 border-b border-gray-100">
-                <div className="flex flex-col items-center justify-center text-gray-300">
-                  <MdRestaurant size={48} className="mb-2" />
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Foto Menu
-                  </span>
-                </div>
+                {item.imageUrl ? (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-300">
+                    <MdRestaurant size={48} className="mb-2" />
+                    <span className="text-xs font-medium uppercase tracking-wider">
+                      Foto Menu
+                    </span>
+                  </div>
+                )}
 
                 {/* Availability Badge */}
-                <div
-                  className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border ${item.available ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}
+                <button
+                  onClick={() => handleToggleAvailability(item)}
+                  className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border cursor-pointer transition-all hover:scale-105 ${
+                    item.isAvailable
+                      ? 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
+                      : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
+                  }`}
+                  title="Klik untuk ubah status"
                 >
-                  {item.available ? 'Tersedia' : 'Habis'}
-                </div>
+                  {item.isAvailable ? 'Tersedia' : 'Habis'}
+                </button>
               </div>
 
               {/* Content */}
               <div className="p-4 flex flex-col flex-1">
                 <div className="flex justify-between items-start mb-2 gap-2">
-                  <span className="bg-orange-50 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
-                    {item.category}
-                  </span>
+                  <h3
+                    className="font-bold text-lg text-text-dark line-clamp-1 flex-1"
+                    title={item.name}
+                  >
+                    {item.name}
+                  </h3>
                   <p className="font-bold text-text-dark whitespace-nowrap">
                     Rp {item.price.toLocaleString('id-ID')}
                   </p>
                 </div>
 
-                <h3
-                  className="font-bold text-lg text-text-dark mb-2 transition-colors line-clamp-1"
-                  title={item.name}
-                >
-                  {item.name}
-                </h3>
+                {/* Categories */}
+                {item.category && item.category.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {item.category.map((cat, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-orange-50 text-primary rounded text-[10px] font-bold uppercase tracking-wider border border-orange-100"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Description Truncated */}
                 <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-1 leading-relaxed">
@@ -325,11 +331,15 @@ export default function MenuPage() {
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
-            <MdSearch size={32} />
+            {searchTerm ? <MdSearch size={32} /> : <MdRestaurant size={32} />}
           </div>
-          <p className="text-text-dark font-medium">Menu tidak ditemukan</p>
+          <p className="text-text-dark font-medium">
+            {searchTerm ? 'Menu tidak ditemukan' : 'Belum ada menu'}
+          </p>
           <p className="text-sm text-gray-500">
-            Coba kata kunci lain atau tambah menu baru
+            {searchTerm
+              ? 'Coba kata kunci lain atau tambah menu baru'
+              : 'Klik "Tambah Menu" untuk menambahkan menu pertama Anda'}
           </p>
         </div>
       )}
