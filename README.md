@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍽️ Admin Dashboard - KampusMeal Warung
 
-## Getting Started
+![KampusMeal Banner](https://img.shields.io/badge/KampusMeal-Admin_Dashboard-orange?style=for-the-badge)
 
-First, run the development server:
+> **Platform manajemen warung yang modern, cepat, dan intuitif untuk mitra KampusMeal.**
+
+![Next.js](https://img.shields.io/badge/next.js-v16.0.8-000000?style=for-the-badge&logo=nextdotjs)
+![React](https://img.shields.io/badge/react-v19.2.1-61DAFB?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/typescript-v5-3178C6?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/tailwindcss-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
+![Status](https://img.shields.io/badge/status-development-yellow?style=for-the-badge)
+
+---
+
+## 📖 Tentang Project
+
+**Admin Frontend KampusMeal** adalah aplikasi web berbasis **Next.js** yang dirancang khusus untuk pemilik warung (mitra) di ekosistem **KampusMeal**. Aplikasi ini berfungsi sebagai pusat kendali bagi pemilik warung untuk mengelola operasional bisnis mereka secara digital dengan mudah dan efisien.
+
+Dengan antarmuka yang bersih dan responsif, mitra dapat memantau pesanan, mengelola menu makanan, melihat ulasan pelanggan, dan memperbarui profil warung mereka secara _real-time_.
+
+## ✨ Fitur Utama
+
+Aplikasi ini dilengkapi dengan berbagai fitur untuk mendukung produktivitas mitra:
+
+- **📊 Dashboard Interaktif**: Ringkasan performa warung, grafik pendapatan (coming soon), dan notifikasi penting.
+- **🍛 Manajemen Menu**: Tambah, edit, dan hapus menu makanan dengan mudah. Atur ketersediaan stok dalam satu klik.
+- **🛍️ Manajemen Pesanan**: Terima dan proses pesanan masuk dari mahasiswa secara _real-time_.
+- **🏪 Profil Warung**: Kelola informasi warung, jam operasional, dan foto profil.
+- **⭐ Ulasan & Rating**: Pantau ulasan dari pelanggan untuk meningkatkan kualitas layanan.
+- **🔐 Autentikasi Aman**: Sistem login yang aman untuk melindungi data mitra.
+- **📱 Responsif**: Tampilan yang optimal di perangkat desktop maupun tablet.
+
+## 🛠️ Teknologi (Tech Stack)
+
+Project ini dibangun menggunakan teknologi web modern terkini untuk memastikan performa yang cepat dan _developer experience_ yang baik.
+
+| Kategori           | Teknologi                                                        | Deskripsi                                                      |
+| :----------------- | :--------------------------------------------------------------- | :------------------------------------------------------------- |
+| **Core Framework** | [Next.js 16](https://nextjs.org/)                                | Framework React full-stack dengan App Router terbaru.          |
+| **UI Library**     | [React 19](https://react.dev/)                                   | Library untuk membangun antarmuka pengguna yang dinamis.       |
+| **Language**       | [TypeScript](https://www.typescriptlang.org/)                    | JavaScript dengan tipe data statis untuk kode yang lebih aman. |
+| **Styling**        | [Tailwind CSS v4](https://tailwindcss.com/)                      | Framework CSS utility-first untuk styling cepat & modern.      |
+| **Code Quality**   | [ESLint](https://eslint.org/) & [Prettier](https://prettier.io/) | Menjaga konsistensi dan kualitas kode.                         |
+| **Git Hooks**      | [Husky](https://typicode.github.io/husky/)                       | Menjalankan script otomatis sebelum commit (pre-commit).       |
+
+## 🚀 Cara Menjalankan (Local Development)
+
+Ikuti langkah-langkah berikut untuk menjalankan project ini di komputer lokal Anda:
+
+### 1. Prasyarat
+
+Pastikan Anda sudah menginstal:
+
+- [Node.js](https://nodejs.org/) (Versi LTS disarankan, min v18+)
+- Package manager (npm, yarn, pnpm, atau bun). Disarankan menggunakan **npm** atau **pnpm**.
+
+### 2. Instalasi Dependensi
+
+Clone repository ini (jika belum) dan install dependensi:
+
+```bash
+# Menggunakan npm
+npm install
+
+# Atau menggunakan pnpm
+pnpm install
+```
+
+### 3. Setup Environment Variable
+
+Duplikasi file `.env.local.example` (jika ada) menjadi `.env.local` dan sesuaikan variabel environtment-nya.
+_(Hubungi tim backend jika memerlukan API URL spesifik)_.
+
+### 4. Jalankan Development Server
+
+Mulai server lokal:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
+# atau
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000) di browser Anda untuk melihat hasilnya.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Struktur Project
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Struktur folder utama menggunakan **Next.js App Router**:
 
-## Learn More
+```
+src/
+├── app/                 # Halaman & Routing (App Router)
+│   ├── dashboard/       # Halaman utama Admin (Protected)
+│   │   ├── menu/        # Halaman Manajemen Menu
+│   │   ├── orders/      # Halaman Pesanan
+│   │   ├── profile/     # Halaman Profil Warung
+│   │   └── reviews/     # Halaman Ulasan
+│   └── login/           # Halaman Login
+├── components/          # Komponen UI Reusable
+├── utils/               # Fungsi utilitas & helper
+└── ...
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 🤝 Kontribusi
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Project ini bersifat **Open Source** dan dikembangkan untuk keperluan Tugas Akhir / Product Development KampusMeal. Kontribusi terbatas pada tim pengembang yang berwenang.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Pastikan branch Anda _up-to-date_.
+2. Gunakan [Conventional Commits](https://www.conventionalcommits.org/) saat melakukan commit.
+3. Pastikan tidak ada _linting error_ sebelum push.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<p align="center">
+  Dibuat dengan ❤️ oleh Tim KampusMeal
+</p>
