@@ -1,5 +1,6 @@
 'use client';
 
+import type { Order } from '@/utils/ordersApi';
 import Image from 'next/image';
 import {
   MdClose,
@@ -10,45 +11,6 @@ import {
   MdRestaurant,
   MdStorefront,
 } from 'react-icons/md';
-
-// --- Types ---
-type OrderStatus =
-  | 'waiting_confirmation'
-  | 'processing'
-  | 'ready'
-  | 'completed'
-  | 'cancelled'
-  | 'rejected'
-  | 'pending_payment';
-type DeliveryMethod = 'pickup' | 'delivery';
-
-interface OrderItem {
-  menuItemId: string;
-  name: string;
-  price: string | number;
-  imageUrl: string;
-  quantity: number;
-  subtotal: number;
-}
-
-interface Order {
-  id: string;
-  userId: string;
-  stallId: string;
-  stallName: string;
-  items: OrderItem[];
-  itemsTotal: number;
-  appFee: number;
-  deliveryMethod: DeliveryMethod;
-  deliveryFee: number;
-  totalPrice: number;
-  paymentProofUrl: string | null;
-  status: OrderStatus;
-  rejectionReason: string | null;
-  isReviewed: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface OrderDetailModalProps {
   isOpen: boolean;
@@ -176,7 +138,7 @@ export default function OrderDetailModal({
                       Nama Pengguna
                     </span>
                     <span className="font-mono text-sm font-medium text-gray-900 block break-all">
-                      {order.userId}
+                      {order.username}
                     </span>
                   </div>
                   <div>

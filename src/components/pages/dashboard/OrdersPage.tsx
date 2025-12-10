@@ -1,7 +1,15 @@
 'use client';
 
 import OrderDetailModal from '@/components/features/orders/OrderDetailModal';
-import { useState } from 'react';
+import type { Order, OrderStatus } from '@/utils/ordersApi';
+import {
+  completeOrder as apiCompleteOrder,
+  confirmPayment as apiConfirmPayment,
+  markOrderReady as apiMarkOrderReady,
+  rejectPayment as apiRejectPayment,
+  getStallOrders,
+} from '@/utils/ordersApi';
+import { useEffect, useState } from 'react';
 import {
   MdAccessTime,
   MdCancel,
@@ -16,158 +24,8 @@ import {
   MdStorefront,
 } from 'react-icons/md';
 
-// --- Types matched to API Response ---
-
-type OrderStatus =
-  | 'waiting_confirmation'
-  | 'processing'
-  | 'ready'
-  | 'completed'
-  | 'cancelled'
-  | 'rejected'
-  | 'pending_payment';
+// --- Types ---
 type DeliveryMethod = 'pickup' | 'delivery';
-
-interface OrderItem {
-  menuItemId: string;
-  name: string;
-  price: string | number; // API might return string or number based on example
-  imageUrl: string;
-  quantity: number;
-  subtotal: number;
-}
-
-interface Order {
-  id: string;
-  userId: string;
-  stallId: string;
-  stallName: string;
-  items: OrderItem[];
-  itemsTotal: number;
-  appFee: number;
-  deliveryMethod: DeliveryMethod;
-  deliveryFee: number;
-  totalPrice: number;
-  paymentProofUrl: string | null;
-  status: OrderStatus;
-  rejectionReason: string | null;
-  isReviewed: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// --- Mock Data (Response structure matched) ---
-
-const MOCK_ORDERS_DATA: Order[] = [
-  {
-    id: '864359f3-ef12-48ad-bea0-2a805e73af24',
-    userId: '0bE2MBaWbGeC1qLUxXWN0IIAoqr1',
-    stallId: '5f637f13-65e2-44ad-94d3-bde2c6d42254',
-    stallName: 'Warung Bu Siti',
-    items: [
-      {
-        menuItemId: '97272448-cf0d-4477-88d3-466e7a751acf',
-        name: 'Nasi Goreng Special',
-        price: '15000',
-        imageUrl: '', // Placeholder if empty
-        quantity: 1,
-        subtotal: 15000,
-      },
-    ],
-    itemsTotal: 15000,
-    appFee: 1000,
-    deliveryMethod: 'delivery',
-    deliveryFee: 5000,
-    totalPrice: 21000,
-    paymentProofUrl: 'https://placehold.co/400x600/png?text=Bukti+Transfer', // Dummy URL
-    status: 'completed',
-    rejectionReason: null,
-    isReviewed: true,
-    createdAt: '2025-12-10T05:01:39.065Z',
-    updatedAt: '2025-12-10T09:26:58.782Z',
-  },
-  {
-    id: 'adf7a77e-0a2c-4f25-b795-4b1bf5572296',
-    userId: '0bE2MBaWbGeC1qLUxXWN0IIAoqr1',
-    stallId: '5f637f13-65e2-44ad-94d3-bde2c6d42254',
-    stallName: 'Warung Bu Siti',
-    items: [
-      {
-        menuItemId: '97272448-cf0d-4477-88d3-466e7a751acf',
-        name: 'Nasi Goreng Special',
-        price: 15000,
-        imageUrl: '',
-        quantity: 1,
-        subtotal: 15000,
-      },
-    ],
-    itemsTotal: 15000,
-    appFee: 1000,
-    deliveryMethod: 'pickup',
-    deliveryFee: 0,
-    totalPrice: 16000,
-    paymentProofUrl: 'https://placehold.co/400x600/png?text=Bukti+Transfer',
-    status: 'waiting_confirmation',
-    rejectionReason: null,
-    isReviewed: false,
-    createdAt: '2025-12-10T04:58:06.165Z',
-    updatedAt: '2025-12-10T04:58:06.165Z',
-  },
-  {
-    id: 'order_processing_1',
-    userId: 'user_123',
-    stallId: '5f637f13-65e2-44ad-94d3-bde2c6d42254',
-    stallName: 'Warung Bu Siti',
-    items: [
-      {
-        menuItemId: 'menu_002',
-        name: 'Es Teh Manis',
-        price: 5000,
-        imageUrl: '',
-        quantity: 2,
-        subtotal: 10000,
-      },
-    ],
-    itemsTotal: 10000,
-    appFee: 1000,
-    deliveryMethod: 'pickup',
-    deliveryFee: 0,
-    totalPrice: 11000,
-    paymentProofUrl: 'https://placehold.co/400x600/png?text=Bukti+Transfer',
-    status: 'processing',
-    rejectionReason: null,
-    isReviewed: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'order_ready_1',
-    userId: 'user_456',
-    stallId: '5f637f13-65e2-44ad-94d3-bde2c6d42254',
-    stallName: 'Warung Bu Siti',
-    items: [
-      {
-        menuItemId: 'menu_003',
-        name: 'Ayam Bakar',
-        price: 20000,
-        imageUrl: '',
-        quantity: 1,
-        subtotal: 20000,
-      },
-    ],
-    itemsTotal: 20000,
-    appFee: 1000,
-    deliveryMethod: 'delivery',
-    deliveryFee: 5000,
-    totalPrice: 26000,
-    paymentProofUrl: 'https://placehold.co/400x600/png?text=Bukti+Transfer',
-    status: 'ready',
-    rejectionReason: null,
-    isReviewed: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 // --- Components ---
 
@@ -197,16 +55,16 @@ const StatusBadge = ({ status }: { status: OrderStatus }) => {
           <MdCheckCircle size={14} /> Selesai
         </span>
       );
-    case 'cancelled':
-      return (
-        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200 flex items-center gap-1.5">
-          <MdCancel size={14} /> Dibatalkan
-        </span>
-      );
     case 'rejected':
       return (
         <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1.5">
           <MdClose size={14} /> Ditolak
+        </span>
+      );
+    case 'pending_payment':
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200 flex items-center gap-1.5">
+          <MdAccessTime size={14} /> Menunggu Pembayaran
         </span>
       );
     default:
@@ -318,11 +176,15 @@ const ImageModal = ({
 };
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS_DATA);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Loading & Error states
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   // Reject Modal State
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -330,23 +192,43 @@ export default function OrdersPage() {
     string | null
   >(null);
 
-  // Filter Logic
+  // Fetch orders on mount and when filter changes
+  useEffect(() => {
+    fetchOrders();
+  }, [statusFilter]);
+
+  async function fetchOrders() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getStallOrders(
+        statusFilter as OrderStatus | 'all',
+        1,
+        100, // Get all orders for now
+      );
+      setOrders(response.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat pesanan');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // Filter Logic
   const filteredOrders = orders.filter((order) => {
     // Tab Filtering
     if (activeTab === 'HISTORY') {
-      return ['completed', 'cancelled', 'rejected'].includes(order.status);
+      return ['completed', 'rejected'].includes(order.status);
     }
 
-    // Active Tab (Now functioning as Main list with filters)
+    // Active Tab
     if (activeTab === 'ACTIVE') {
       if (statusFilter !== 'all') {
         return order.status === statusFilter;
       }
-      // If 'all', show everything except maybe cancelled if not in list?
-      // Or show everything including history since user added 'Selesai' filter.
-      // Let's show everything to be flexible.
-      return true;
+      // Show all active orders (not completed or rejected)
+      return !['completed', 'rejected'].includes(order.status);
     }
 
     return true;
@@ -359,40 +241,31 @@ export default function OrdersPage() {
 
   // --- Actions ---
 
-  const handleConfirmOrder = (orderId: string) => {
-    // API Call: PATCH /orders/my-stall/orders/:orderId/confirm
-    console.log(`Confirming order: ${orderId}`);
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? { ...o, status: 'processing', updatedAt: new Date().toISOString() }
-          : o,
-      ),
-    );
+  const handleConfirmOrder = async (orderId: string) => {
+    try {
+      const updated = await apiConfirmPayment(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal konfirmasi pembayaran');
+    }
   };
 
-  const handleMarkReady = (orderId: string) => {
-    // API Call: PATCH /orders/my-stall/orders/:orderId/ready
-    console.log(`Marking ready: ${orderId}`);
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? { ...o, status: 'ready', updatedAt: new Date().toISOString() }
-          : o,
-      ),
-    );
+  const handleMarkReady = async (orderId: string) => {
+    try {
+      const updated = await apiMarkOrderReady(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal tandai pesanan siap');
+    }
   };
 
-  const handleCompleteOrder = (orderId: string) => {
-    // API Call: PATCH /orders/my-stall/orders/:orderId/complete
-    console.log(`Completing order: ${orderId}`);
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? { ...o, status: 'completed', updatedAt: new Date().toISOString() }
-          : o,
-      ),
-    );
+  const handleCompleteOrder = async (orderId: string) => {
+    try {
+      const updated = await apiCompleteOrder(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal selesaikan pesanan');
+    }
   };
 
   const openRejectModal = (orderId: string) => {
@@ -400,26 +273,19 @@ export default function OrdersPage() {
     setRejectModalOpen(true);
   };
 
-  const handleRejectOrder = (reason: string) => {
+  const handleRejectOrder = async (reason: string) => {
     if (!selectedOrderIdToReject) return;
-    // API Call: PATCH /orders/my-stall/orders/:orderId/reject
-    console.log(
-      `Rejecting order ${selectedOrderIdToReject} with reason: ${reason}`,
-    );
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === selectedOrderIdToReject
-          ? {
-              ...o,
-              status: 'rejected',
-              rejectionReason: reason,
-              updatedAt: new Date().toISOString(),
-            }
-          : o,
-      ),
-    );
-    setRejectModalOpen(false);
-    setSelectedOrderIdToReject(null);
+
+    try {
+      const updated = await apiRejectPayment(selectedOrderIdToReject, reason);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === selectedOrderIdToReject ? updated : o)),
+      );
+      setRejectModalOpen(false);
+      setSelectedOrderIdToReject(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal menolak pembayaran');
+    }
   };
 
   // Helper
@@ -437,6 +303,51 @@ export default function OrdersPage() {
       minute: '2-digit',
     }).format(date);
   };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+          <p className="text-gray-500">Memuat pesanan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-red-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-red-600 font-medium mb-2">Terjadi Kesalahan</p>
+          <p className="text-gray-500 text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchOrders}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto h-full flex flex-col">
@@ -465,7 +376,11 @@ export default function OrdersPage() {
           <span
             className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'ACTIVE' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}
           >
-            {orders.length}
+            {
+              orders.filter(
+                (o) => !['completed', 'rejected'].includes(o.status),
+              ).length
+            }
           </span>
           {activeTab === 'ACTIVE' && (
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />
@@ -490,8 +405,6 @@ export default function OrdersPage() {
             { id: 'waiting_confirmation', label: 'Menunggu Konfirmasi' },
             { id: 'processing', label: 'Diproses' },
             { id: 'ready', label: 'Siap Diambil' },
-            { id: 'rejected', label: 'Ditolak' },
-            { id: 'completed', label: 'Selesai' },
           ].map((status) => (
             <button
               key={status.id}
@@ -634,9 +547,7 @@ export default function OrdersPage() {
                   )}
 
                   {/* Actions for History (View Proof only maybe) */}
-                  {['completed', 'rejected', 'cancelled'].includes(
-                    order.status,
-                  ) &&
+                  {['completed', 'rejected'].includes(order.status) &&
                     order.paymentProofUrl && (
                       <button
                         onClick={() => setSelectedProof(order.paymentProofUrl)}
