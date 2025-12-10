@@ -1,5 +1,6 @@
 'use client';
 
+import { logout } from '@/utils/auth';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -112,8 +113,7 @@ export default function Sidebar() {
         <button
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-text-dark border border-red-200 hover:border-red-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200 font-medium text-sm group cursor-pointer"
           onClick={() => {
-            // TODO: Implement logout logic
-            console.log('Logout clicked');
+            logout();
           }}
         >
           <MdLogout
